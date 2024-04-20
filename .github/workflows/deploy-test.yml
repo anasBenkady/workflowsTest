@@ -27,19 +27,19 @@ jobs:
           echo "Matrix: $JSON_ARRAY"
           
           # Write the matrix to an environment file
-          echo "MATRIX=${JSON_ARRAY}" >> $GITHUB_ENV
+          echo "MATRIX=${JSON_ARRAY}" >> $GITHUB_OUTPUT
 
       - name: Output matrix
         run: |
           MATRIX_JSON=$(echo $MATRIX | jq -c '[.[] | {package: .}]')
-          echo "matrix=${MATRIX_JSON}" >> $GITHUB_ENV
+          echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
   publish:
     needs: setup_matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(env.matrix)}}
+      matrix: ${{fromJson(steps.set-matrix.outputs.matrix)}}
     environment: Dev
     steps:
       - uses: actions/checkout@v3
