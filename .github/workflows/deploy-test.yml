@@ -22,12 +22,11 @@ jobs:
           PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
           echo "Found packages: $PACKAGES"
           
-          # Format the output into a JSON array of strings
-          JSON_ARRAY=$(echo $PACKAGES | jq -R -s -c 'split("\n")[:-1]')
+          # Format the output into a JSON array of strings, ensure paths are quoted
+          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(@sh)')
           echo "Matrix: $JSON_ARRAY"
           
           # Set the output variable 'matrix', which will contain the list of directories
-          # echo "::set-output name=matrix::{\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}"
           echo "matrix={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}" >> $GITHUB_OUTPUT
         shell: bash
 
