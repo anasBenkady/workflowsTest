@@ -45,10 +45,25 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies and publish package
+      - name: Configure npm registry
         working-directory: ${{ matrix.package }}
-        run: |
-          echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
-          echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
-          npm install
-          npm whoami
+        run: | 
+              echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
+              echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.package }}
+        # run:  npm install
+        run: npm whoami
+
+      - name: Unpublish existing package version
+        working-directory: ${{ matrix.package }}
+        # run: npm unpublish --force
+        run: echo "unpublish" && false
+        continue-on-error: true
+
+      - name: publish the new package version
+        working-directory: ${{ matrix.package }}
+        # run:  npm publish
+        run: echo "publish"
+
