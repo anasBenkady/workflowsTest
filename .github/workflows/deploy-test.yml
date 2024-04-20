@@ -1,10 +1,3 @@
-name: Publish Packages to Verdaccio
-
-on:
-  push:
-    branches:
-      - development
-
 jobs:
   setup_matrix:
     runs-on: ubuntu-latest
@@ -22,11 +15,9 @@ jobs:
           PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
           echo "Found packages: $PACKAGES"
           
-          # Format the output into a JSON array of strings, ensure paths are quoted
-           JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(.)')
+          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(.)')
           echo "Matrix: $JSON_ARRAY"
           
-          # Set the output variable 'matrix', which will contain the list of directories
           echo "matrix={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}" >> $GITHUB_OUTPUT
         shell: bash
 
@@ -37,6 +28,9 @@ jobs:
       fail-fast: false
       matrix: ${{fromJson(needs.setup_matrix.outputs.matrix)}}
     environment: Dev
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
     steps:
       - uses: actions/checkout@v3
 
@@ -46,24 +40,16 @@ jobs:
           node-version: '20'
 
       - name: Configure npm registry
-        working-directory: ${{ matrix.package }}
-        run: | 
+        run: |
               echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
               echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
 
       - name: Install dependencies
-        working-directory: ${{ matrix.package }}
-        # run:  npm install
         run: npm whoami
 
       - name: Unpublish existing package version
-        working-directory: ${{ matrix.package }}
-        # run: npm unpublish --force
         run: echo "unpublish" && false
         continue-on-error: true
 
       - name: publish the new package version
-        working-directory: ${{ matrix.package }}
-        # run:  npm publish
         run: echo "publish"
-
