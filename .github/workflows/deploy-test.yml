@@ -1,4 +1,4 @@
-name: test Publish Packages to Verdaccio
+name: Publish Packages to Verdaccio
 
 on:
   push:
@@ -26,16 +26,20 @@ jobs:
           JSON_ARRAY=$(echo $PACKAGES | jq -R -s -c 'split("\n")[:-1]')
           echo "Matrix: $JSON_ARRAY"
           
-          # Set the output variable 'matrix', which will contain the list of directories
-          echo "::set-output name=matrix::{\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}"
-        shell: bash
+          # Write the matrix to an environment file
+          echo "MATRIX=${JSON_ARRAY}" >> $GITHUB_ENV
+
+      - name: Output matrix
+        run: |
+          MATRIX_JSON=$(echo $MATRIX | jq -c '[.[] | {package: .}]')
+          echo "matrix=${MATRIX_JSON}" >> $GITHUB_ENV
 
   publish:
     needs: setup_matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.setup_matrix.outputs.matrix)}}
+      matrix: ${{fromJson(env.matrix)}}
     environment: Dev
     steps:
       - uses: actions/checkout@v3
