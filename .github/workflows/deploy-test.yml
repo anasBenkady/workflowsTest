@@ -1,3 +1,10 @@
+name: Publish Packages to Verdaccio
+
+on:
+  push:
+    branches:
+      - development
+
 jobs:
   setup_matrix:
     runs-on: ubuntu-latest
@@ -53,3 +60,4 @@ jobs:
 
       - name: publish the new package version
         run: echo "publish"
+
