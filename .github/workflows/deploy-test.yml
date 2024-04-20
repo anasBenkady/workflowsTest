@@ -50,5 +50,4 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: |
           npm install
-          npm unpublish --force || true
-          npm publish --registry http://${{ secrets.VERDACCIO_REGISTRY }} --//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=${{ secrets.VERDACCIO_TOKEN }}
+          ls
