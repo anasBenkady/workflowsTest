@@ -26,20 +26,17 @@ jobs:
           JSON_ARRAY=$(echo $PACKAGES | jq -R -s -c 'split("\n")[:-1]')
           echo "Matrix: $JSON_ARRAY"
           
-          # Write the matrix to an environment file
-          echo "MATRIX=${JSON_ARRAY}" >> $GITHUB_OUTPUT
-
-      - name: Output matrix
-        run: |
-          MATRIX_JSON=$(echo $MATRIX | jq -c '[.[] | {package: .}]')
-          echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
+          # Set the output variable 'matrix', which will contain the list of directories
+          # echo "::set-output name=matrix::{\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}"
+          echo "matrix={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}" >> $GITHUB_OUTPUT
+        shell: bash
 
   publish:
     needs: setup_matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(steps.set-matrix.outputs.matrix)}}
+      matrix: ${{fromJson(needs.setup_matrix.outputs.matrix)}}
     environment: Dev
     steps:
       - uses: actions/checkout@v3
@@ -53,4 +50,5 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: |
           npm install
-          ls
+          npm unpublish --force || true
+          npm publish --registry http://${{ secrets.VERDACCIO_REGISTRY }} --//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=${{ secrets.VERDACCIO_TOKEN }}
