@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "./dist"
+    // other compiler options...
+  },
+  "include": [
+    "*.ts" // Include TypeScript files directly in the root directory
+  ],
+  "exclude": ["node_modules"]
+}

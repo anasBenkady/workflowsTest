@@ -1,0 +1,15 @@
+{
+  
+  "compilerOptions": {
+    "target": "ES6", // Set target ECMAScript version to ESNext to support modern features
+    "module": "CommonJS", // Set module system to CommonJS to generate compatible JS code
+    "declaration": true, // Generate type declaration files (.d.ts)
+    "outDir": "./dist", // Specify output directory for compiled JavaScript files
+    "esModuleInterop": true, // Enable ES module interoperability
+    "strict": true, // Enable strict type-checking options
+  },
+  "include": [
+    "./**.ts", // Include TypeScript files directly in the root directory
+  ],
+  "exclude": ["node_modules"]
+}
