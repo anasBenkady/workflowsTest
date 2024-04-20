@@ -23,7 +23,7 @@ jobs:
           echo "Found packages: $PACKAGES"
           
           # Format the output into a JSON array of strings, ensure paths are quoted
-          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(@sh)')
+           JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(.)')
           echo "Matrix: $JSON_ARRAY"
           
           # Set the output variable 'matrix', which will contain the list of directories
