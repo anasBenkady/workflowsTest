@@ -1,0 +1,52 @@
+name: test Publish Packages to Verdaccio
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  setup_matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get install jq
+
+      - id: set-matrix
+        run: |
+          echo "Finding directories with package.json..."
+          PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
+          echo "Found packages: $PACKAGES"
+          
+          # Format the output into a JSON array of strings
+          JSON_ARRAY=$(echo $PACKAGES | jq -R -s -c 'split("\n")[:-1]')
+          echo "Matrix: $JSON_ARRAY"
+          
+          # Set the output variable 'matrix', which will contain the list of directories
+          echo "::set-output name=matrix::{\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}"
+        shell: bash
+
+  publish:
+    needs: setup_matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.setup_matrix.outputs.matrix)}}
+    environment: Dev
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '20'
+
+      - name: Install dependencies and publish package
+        working-directory: ${{ matrix.package }}
+        run: |
+          npm install
+          ls
