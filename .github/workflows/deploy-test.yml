@@ -48,5 +48,7 @@ jobs:
       - name: Install dependencies and publish package
         working-directory: ${{ matrix.package }}
         run: |
-          npm install
+          echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
+          echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
+          npm whoami
           ls
