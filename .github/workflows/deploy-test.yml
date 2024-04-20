@@ -45,19 +45,20 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: '20'
+      - run: npm install  
 
       - name: Configure npm registry
         run: |
               echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
-              echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
-
-      - name: Install dependencies
-        run: npm whoami
+              echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc        
 
       - name: Unpublish existing package version
-        run: echo "unpublish" && false
+        run: npm unpublish --force
         continue-on-error: true
 
+      - name: Install dependencies for publishing
+        run: npm install
+
       - name: publish the new package version
-        run: echo "publish"
+        run: npm publish
 
