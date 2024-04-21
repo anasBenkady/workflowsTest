@@ -18,6 +18,7 @@ jobs:
         run: sudo apt-get install jq
 
       - id: set-matrix
+        name: Finding packages their dependencies in shared libraries
         run: |
             echo "Finding package.json files..."
             # Find all package.json files, excluding those in node_modules directories
