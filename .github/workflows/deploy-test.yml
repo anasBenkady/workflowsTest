@@ -152,7 +152,7 @@ jobs:
           sorted_packages=$(tsort)
 
           # Convert the sorted packages to a JSON array and store in a variable
-          sorted_packages_json=$(jq -n --argjson pkgs "$(printf '%s\n' "${sorted_packages[@]}" | jq -s .)" '$pkgs')
+          sorted_packages_json=$(printf '%s\n' "${sorted_packages[@]}" | jq -sR 'split("\n") | map(select(length > 0))')
 
           # Output the JSON for verification
           echo "Sorted packages in JSON format:"
