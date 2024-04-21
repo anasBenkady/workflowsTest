@@ -74,7 +74,8 @@ jobs:
               done
               echo "Package dependencies map: $JSON_OBJECT"
 
-              echo "matrix={\"include\":$(echo $JSON_OBJECT | jq '[to_entries[] | {key: .key, needs: .value}]')}" >> $GITHUB_OUTPUT
+              MATRIX_JSON=$(echo $JSON_OBJECT | jq -c '[to_entries[] | {key: .key, needs: .value}]')
+              echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
         shell: bash
   
   build:
