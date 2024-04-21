@@ -6,7 +6,7 @@ on:
       - development
 
 jobs:
-  setup_matrix:
+  find_packages:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
