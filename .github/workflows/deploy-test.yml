@@ -46,11 +46,7 @@ jobs:
             # Convert the array of package names to a JSON array
             PACKAGE_NAMES_JSON=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
             echo "dependencies = $PACKAGE_NAMES_JSON"
-
-            # Convert the array of package names to a JSON array
-            PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
-            echo "dependencies = $PACKAGE_NAMES_JSON"
-
+            
             # New code to iterate over the package.json files and extract dependencies
             DEPENDENCIES_MAP="{"
             for PACKAGE in $PACKAGES; do
