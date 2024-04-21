@@ -18,47 +18,13 @@ jobs:
 
       - id: set-matrix
         run: |
-          echo "Finding directories with package.json..."
-          PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
-          echo "Found packages: $PACKAGES"
-          
-          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(.)')
-          echo "Matrix: $JSON_ARRAY"
-          
-          echo "matrix={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}" >> $GITHUB_OUTPUT
+          PACKAGES_INFO="[]"
+          for PACKAGE in $(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;); do
+            NAME=$(jq -r '.name' $PACKAGE/package.json)
+            LOCAL_DEPS=$(jq -r '.dependencies | to_entries[] | select(.value | startswith("file:")) | .key' $PACKAGE/package.json)
+            PACKAGES_INFO=$(echo $PACKAGES_INFO | jq -c --arg pkg $PACKAGE --arg name "$NAME" --arg deps "$LOCAL_DEPS" '. += [{"package": $pkg, "name": $name, "dependencies": ($deps | split("\n") | map(select(. != "")))]}')
+          done
+          echo "matrix={\"include\":$PACKAGES_INFO}" >> $GITHUB_OUTPUT
         shell: bash
 
-  publish:
-    needs: setup_matrix
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix: ${{fromJson(needs.setup_matrix.outputs.matrix)}}
-    environment: Dev
-    defaults:
-      run:
-        working-directory: ${{ matrix.package }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: '20'
-      - run: npm install  
-
-      - name: Configure npm registry
-        run: |
-              echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
-              echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc        
-
-      - name: Unpublish existing package version
-        run: npm unpublish --force
-        continue-on-error: true
-
-      - name: Install dependencies for publishing
-        run: npm install
-
-      - name: publish the new package version
-        run: npm publish
 
