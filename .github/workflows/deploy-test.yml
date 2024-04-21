@@ -84,6 +84,6 @@ jobs:
       - name: Current package
         run: |
             DEPENDENCIES_JSON='${{ needs.find_packages.outputs.dependencies }}'
-            # DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
-            echo "current package: ${{ matrix.package }}" # with dependencies: $DEPS_JSON
+            DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
+            echo "current package: ${{ matrix.package }}" with dependencies: $DEPS_JSON
         
