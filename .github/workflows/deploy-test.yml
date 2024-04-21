@@ -28,6 +28,7 @@ jobs:
 
             MATRIX_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
             echo "matrix = $MATRIX_JSON"
+            echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
             PACKAGE_NAMES=()
 
@@ -66,6 +67,7 @@ jobs:
             DEPENDENCIES_MAP+="}"
 
             echo "dependencies map = $DEPENDENCIES_MAP"
+            echo "dependencies=$DEPENDENCIES_MAP" >> $GITHUB_OUTPUT
 
         shell: bash
   
