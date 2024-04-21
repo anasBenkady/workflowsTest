@@ -73,9 +73,9 @@ jobs:
     needs: find_packages
     runs-on: ubuntu-latest
     environment: Dev
-    env:
-      PACKAGES: ${{ needs.find_packages.outputs.packages }}
-      DEPENDENCIES_MAP: ${{ needs.find_packages.outputs.dependencies-map }}
+    #env:
+      #PACKAGES: ${{ needs.find_packages.outputs.packages }}
+      #DEPENDENCIES_MAP: ${{ needs.find_packages.outputs.dependencies-map }}
     outputs:
         ordered-packages: ${{ steps.order-packages-step.outputs.ordered-packages }}
     steps:
@@ -84,53 +84,58 @@ jobs:
       - id: ordered-packages
         name: Ordering the packages array
         run: | 
-          echo "PACKAGES : $PACKAGES"
-          echo "DEPENDENCIES_MAP : $DEPENDENCIES_MAP"
-          # Declare associative arrays for dependencies and in-degrees
-          declare -A dependencies
-          declare -A in_degree
+          PACKAGES=("./RabitMqClient" "./CommonMessages" "./Logger")
+          declare -A DEPENDENCIES_MAP=(
+              ["./RabitMqClient"]=("./Logger" "./CommonMessages")
+              ["./CommonMessages"]=("./Logger")
+              ["./Logger"]=()
+          )
+          # Topological sort function
+          function tsort() {
+              local -n nodes=$1
+              local -n edges=$2
+              local -A visited
+              local -A mark
+              local -a sorted
 
-          # Initialize in-degrees to zero for each package
-          for package in "${PACKAGES[@]}"; do
-            in_degree["$package"]=0
-          done
+              # Helper function for depth-first search
+              function visit() {
+                  local node=$1
+                  if [[ ${mark[$node]} -eq 1 ]]; then
+                      echo "Cycle detected, sorting not possible"
+                      exit 1
+                  fi
+                  if [[ -z ${visited[$node]} ]]; then
+                      mark[$node]=1
+                      for dep in ${edges[$node]+"${edges[$node]}"}; do
+                          visit $dep
+                      done
+                      mark[$node]=0
+                      visited[$node]=1
+                      sorted=("$node" "${sorted[@]}")
+                  fi
+              }
 
-          # Parse the dependencies map to fill dependencies and adjust in-degrees
-          echo "$DEPENDENCIES_MAP" | jq -r '. | to_entries[] | .key as $k | .value[] | "\($k)|\(.)"' | while IFS="|" read -r key dep; do
-            dependencies["$key"]+="$dep "
-            ((in_degree["$dep"]++))
-          done
+              for node in "${nodes[@]}"; do
+                  if [[ -z ${visited[$node]} ]]; then
+                      visit $node
+                  fi
+              done
+              echo ${sorted[@]}
+          }
 
-          # Initialize queue with packages having zero in-degree
-          queue=()
-          for package in "${PACKAGES[@]}"; do
-            if [[ ${in_degree[$package]} -eq 0 ]]; then
-              queue+=("$package")
-            fi
-          done
+          # Call tsort and pass the package names and their dependencies
+          sorted_packages=$(tsort PACKAGES DEPENDENCIES_MAP)
+          echo "Sorted packages:"
+          echo $sorted_packages
 
-          # Result array to hold the sorted order
-          ORDERED_PACKAGES=()
-
-          # Process the queue
-          while [[ ${#queue[@]} -gt 0 ]]; do
-            current="${queue[0]}"
-            queue=("${queue[@]:1}")
-            ORDERED_PACKAGES+=("$current")
-
-            # Split dependencies into an array to iterate
-            read -a current_deps <<< "${dependencies[$current]}"
-            for dep in "${current_deps[@]}"; do
-              ((in_degree["$dep"]--))
-              if [[ ${in_degree["$dep"]} -eq 0 ]]; then
-                queue+=("$dep")
-              fi
-            done
-          done
-
-          # Print sorted packages
-          echo "Sorted packages based on dependencies:"
-          for pkg in "${ORDERED_PACKAGES[@]}"; do
-            echo "$pkg"
+          # The output will provide the order to process the packages
+          # For publishing or any further action, iterate over `sorted_packages`
+          for pkg in $sorted_packages; do
+              echo "Processing $pkg..."
+              # Add the command to navigate to the package directory and execute the desired action, e.g., npm publish
+              # cd $pkg
+              # npm publish --registry http://your-verdaccio-server:4873
+              # cd -
           done
       
