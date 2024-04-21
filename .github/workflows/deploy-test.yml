@@ -21,7 +21,7 @@ jobs:
             # Find all package.json files, excluding those in node_modules directories
             PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*')
 
-            PACKAGES_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
+            PACKAGES_JSON=$(echo "$PACKAGES" | sed 's#/package.json##' | jq -R -s -c 'split("\n")[:-1]')
             echo "Found packages = $PACKAGES_JSON"
             echo "package=$PACKAGES_JSON" >> $GITHUB_OUTPUT
 
@@ -82,7 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - id: order-packages-step
+      - id: ordered-packages
         name: Ordering the packages array
         run: | 
           echo "PACKAGES : $PACKAGES"
