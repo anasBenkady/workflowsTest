@@ -89,15 +89,14 @@ jobs:
           # Declare associative arrays for dependencies and in-degrees
           declare -A dependencies
           declare -A in_degree
-          # Parse DEPENDENCIES_MAP into associative arrays
-          eval "$(echo "$DEPENDENCIES_MAP" | jq -r 'to_entries | .[] | .key as $k | "dependencies[\$k]=(" + (.value | join(" ")) + ")"; "in_degree[\$k]=0"')"
 
-          # Calculate in-degrees
-          for package in "${!dependencies[@]}"; do
-            for dep in ${dependencies[$package]}; do
-              ((in_degree[$dep]++))
-            done
-          done
+          # Parse DEPENDENCIES_MAP and populate the dependencies array
+          while IFS= read -r line; do
+            key=$(cut -d '|' -f1 <<< "$line")
+            value=$(cut -d '|' -f2 <<< "$line")
+            dependencies["$key"]+=("$value")
+            ((in_degree["$value"]++))
+          done < <(echo "$DEPENDENCIES_MAP" | jq -r '. | to_entries[] | .key as $k | .value[] | $k + "|" + .')
 
           # Initialize queue with packages having zero in-degree
           queue=()
@@ -116,9 +115,9 @@ jobs:
             queue=("${queue[@]:1}")
             ORDERED_PACKAGES+=("$current")
 
-            for dep in ${dependencies[$current]}; do
-              ((in_degree[$dep]--))
-              if [[ ${in_degree[$dep]} -eq 0 ]]; then
+            for dep in "${dependencies[$current]}"; do
+              ((in_degree["$dep"]--))
+              if [[ ${in_degree["$dep]} -eq 0 ]]; then
                 queue+=("$dep")
               fi
             done
