@@ -137,7 +137,7 @@ jobs:
 
           # Call tsort and handle the output
           sorted_packages=$(tsort)
-          echo "Sorted packages:"
+          echo "Sorted packages: $sorted_packages"
           for pkg in $sorted_packages; do
               echo "$pkg"
           done
