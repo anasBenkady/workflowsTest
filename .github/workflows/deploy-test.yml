@@ -101,6 +101,10 @@ jobs:
             DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
             echo "PACKAGE_DEPENDENCIES=$DEPS_JSON" >> $GITHUB_ENV
       
+      - name: Unpublish existing package version
+        run: npm unpublish --force
+        continue-on-error: true
+
       - name: Check packages availability
         run: |
               # Convert JSON array to Bash array using jq
@@ -127,10 +131,6 @@ jobs:
 
       - name: Install dependencies for publishing
         run: npm install        
-
-      - name: Unpublish existing package version
-        run: npm unpublish --force
-        continue-on-error: true
 
       - name: publish the new package version
         run: npm publish
