@@ -22,13 +22,19 @@ jobs:
           PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
           echo "Found packages: $PACKAGES"
           
-          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(.)')
-          echo "Matrix: $JSON_ARRAY"
+          # Create a JSON array of objects, each containing the package directory and name
+          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s 'split("\n")[:-1] | map({"package": ., "name": (input_filename + "/" + . + "/package.json" | . as $file | try input($file) | fromjson.name catch "Unknown")})')
+          echo "JSON Array: $JSON_ARRAY"
           
-          echo "matrix={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}" >> $GITHUB_OUTPUT
+          # Format for matrix usage
+          MATRIX_JSON=$(echo "$JSON_ARRAY" | jq -c '{include: .}')
+          echo "Matrix: $MATRIX_JSON"
+          
+          # Set output for matrix
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_ENV
         shell: bash
 
-  publish:
+  find_dependencies:
     needs: find_packages
     runs-on: ubuntu-latest
     strategy:
