@@ -100,8 +100,8 @@ jobs:
       - name: Build and Test
         run: |
             DEPENDENCIES_JSON='${{ needs.find_packages.outputs.dependencies }}'
-            DEPS=$(echo $DEPENDENCIES_JSON | jq -r '.["${{ matrix.package }}"] | join(", ")')
-            echo "Building and testing ${{ matrix.package }} with dependencies: $DEPS"
+            DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
+            echo "Building and testing ${{ matrix.package }} with dependencies: $DEPS_JSON"
         # Add your actual build and test commands here
 
     # Define dependencies dynamically using the needs field
