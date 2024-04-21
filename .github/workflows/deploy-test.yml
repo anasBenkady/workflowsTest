@@ -47,12 +47,18 @@ jobs:
             PACKAGE_NAMES_JSON=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
             echo "dependencies = $PACKAGE_NAMES_JSON"
 
-            # New code to iterate over the package.json files and extract filtered dependencies
+            # Convert the array of package names to a JSON array
+            PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
+            echo "dependencies = $PACKAGE_NAMES_JSON"
+
+            # New code to iterate over the package.json files and extract dependencies
             DEPENDENCIES_MAP="{"
             for PACKAGE in $PACKAGES; do
                 if [ -f "$PACKAGE" ]; then
-                    # Extract dependencies and filter only those that start with 'dev.linkopus.'
-                    FILTERED_DEPS=$(jq -r '[.dependencies | to_entries[] | select(.key | startswith("dev.linkopus.")) | .key] | join(",")' "$PACKAGE")
+                    # Filter and collect dependencies that are in the PACKAGE_NAMES_JSON
+                    FILTERED_DEPS=$(jq -r --argjson packageNames "$PACKAGE_NAMES_JSON" \
+                        '.dependencies | to_entries | map(select(.key as $k | $packageNames | index($k))) | map(.key) | join(",")' "$PACKAGE")
+                    
                     # Format the output to match the required structure
                     if [[ $FILTERED_DEPS != "" ]]; then
                         DEPENDENCIES_MAP+="\"$(echo $PACKAGE | sed 's|/package.json||')\":[$FILTERED_DEPS],"
@@ -64,8 +70,6 @@ jobs:
             DEPENDENCIES_MAP+="}"
 
             echo "dependencies map = $DEPENDENCIES_MAP"
-
-
 
         shell: bash
   
