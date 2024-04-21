@@ -158,7 +158,7 @@ jobs:
           echo "$formatted_json"
 
           # Properly encode JSON for GitHub Actions output
-          echo "ordered-packages=$(echo "$formatted_json" | jq -sRr @uri)" >> $GITHUB_OUTPUT
+          echo "ordered-packages=$(echo "$formatted_json")" >> $GITHUB_OUTPUT
 
   publish-to-verdaccio:
     needs: order_packages
