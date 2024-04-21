@@ -73,9 +73,9 @@ jobs:
     needs: find_packages
     runs-on: ubuntu-latest
     environment: Dev
-    #env:
-      #PACKAGES: ${{ needs.find_packages.outputs.packages }}
-      #DEPENDENCIES_MAP: ${{ needs.find_packages.outputs.dependencies-map }}
+    env:
+      json_packages: ${{ needs.find_packages.outputs.packages }}
+      json_dependencies: ${{ needs.find_packages.outputs.dependencies-map }}
     outputs:
         ordered-packages: ${{ steps.order-packages-step.outputs.ordered-packages }}
     steps:
@@ -84,12 +84,25 @@ jobs:
       - id: ordered-packages
         name: Ordering the packages array
         run: | 
-          # Define the packages and an array for dependencies where each node points to its dependency
-          declare -a PACKAGES=("./RabitMqClient" "./CommonMessages" "./Logger")
+          # Convert JSON array to Bash array
+          mapfile -t PACKAGES < <(echo $json_packages | jq -r '.[]')
+
+          # Declare associative array for dependencies
           declare -A DEPENDENCIES_MAP
-          DEPENDENCIES_MAP["./RabitMqClient,./Logger"]=1
-          DEPENDENCIES_MAP["./RabitMqClient,./CommonMessages"]=1
-          DEPENDENCIES_MAP["./CommonMessages,./Logger"]=1
+
+          # Populate the DEPENDENCIES_MAP from JSON input
+          for pkg in "${PACKAGES[@]}"; do
+              # Extract dependencies for the package
+              dependencies=$(echo $json_dependencies | jq -r --arg pkg "$pkg" '.[$pkg] | @csv' | tr -d '"')
+
+              # Split dependencies and populate the map
+              IFS=',' read -r -a deps <<< "$dependencies"
+              for dep in "${deps[@]}"; do
+                  if [[ -n "$dep" ]]; then
+                      DEPENDENCIES_MAP["$pkg,$dep"]=1
+                  fi
+              done
+          done
 
           # Topological sort function
           function tsort() {
@@ -120,7 +133,7 @@ jobs:
               while [[ ${#queue[@]} -gt 0 ]]; do
                   local node="${queue[0]}"
                   queue=("${queue[@]:1}")
-                  result=("$node" "${result[@]}")  # Push to front to reverse the order
+                  result=("$node" "${result[@]}")  # Reverse order by pushing to front
                   for edge in "${nodes[@]}"; do
                       IFS=',' read -r src dst <<< "$edge"
                       if [[ $src == "$node" ]]; then
@@ -135,7 +148,7 @@ jobs:
               echo "${result[@]}"
           }
 
-          # Call tsort and handle the output
+          # Perform the topological sort and print sorted packages
           sorted_packages=$(tsort)
           echo "Sorted packages in descending order:"
           for pkg in $sorted_packages; do
