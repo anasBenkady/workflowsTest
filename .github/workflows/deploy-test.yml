@@ -18,25 +18,28 @@ jobs:
 
       - id: set-matrix
         run: |
-              echo "Finding directories with package.json..."
-                # Find all directories containing package.json, excluding node_modules directories
-                PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
-                echo "Found packages: $PACKAGES"
+              echo "Finding package.json files..."
+              # Find all package.json files, excluding those in node_modules directories
+              PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*')
 
-                # Prepare an array to store package names
-                PACKAGE_NAMES=()
+              echo "Found package.json files:"
+              echo "$PACKAGES"
 
-                # Loop over each directory containing package.json
-                for PACKAGE_DIR in $PACKAGES
-                do
-                    # Read the 'name' attribute from package.json
-                    if [ -f "$PACKAGE_DIR/package.json" ]; then
-                        PACKAGE_NAME=$(jq -r '.name' "$PACKAGE_DIR/package.json")
-                        PACKAGE_NAMES+=("$PACKAGE_NAME")
-                    fi
-                done
+              # Prepare an associative array to store file paths and package names
+              declare -A PACKAGE_MAP
 
-                # Convert package names array to JSON array
-                JSON_ARRAY=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
-                echo "Package names: $JSON_ARRAY"
+              # Loop over each found package.json file
+              for PACKAGE_PATH in $PACKAGES
+              do
+                  # Read the 'name' attribute from package.json
+                  if [ -f "$PACKAGE_PATH" ]; then
+                      PACKAGE_NAME=$(jq -r '.name' "$PACKAGE_PATH")
+                      # Using the full path as the key and the package name as the value
+                      PACKAGE_MAP["$PACKAGE_PATH"]="$PACKAGE_NAME"
+                  fi
+              done
+
+              # Output the map as a JSON object
+              JSON_OBJECT=$(jq -n '$ARGS.positional | from_entries' --args -- "${PACKAGE_MAP[@]}")
+              echo "Package map: $JSON_OBJECT"
         shell: bash
