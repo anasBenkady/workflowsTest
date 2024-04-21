@@ -76,7 +76,7 @@ jobs:
       json_packages: ${{ needs.find_packages.outputs.packages }}
       json_dependencies: ${{ needs.find_packages.outputs.dependencies-map }}
     outputs:
-        ordered-packages: ${{ steps.order-packages-step.outputs.ordered-packages }}
+        ordered-packages: ${{ steps.ordered-packages.outputs.ordered-packages }}
     steps:
       - uses: actions/checkout@v3
 
@@ -194,3 +194,4 @@ jobs:
             echo "Navigate back to the root directory..."
             cd -
           done
+        shell: bash
