@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      dependencies: ${{ steps.set-matrix.outputs.dependencies }}
     steps:
       - uses: actions/checkout@v3
 
@@ -74,9 +75,14 @@ jobs:
               done
               echo "Package dependencies map: $JSON_OBJECT"
 
-              MATRIX_JSON={\"include\":$(echo $JSON_OBJECT | jq -c '[to_entries[] | {key: .key, needs: .value}]')}
+              PATH_NEEDS={\"include\":$(echo $JSON_OBJECT | jq -c '[to_entries[] | {key: .key, needs: .value}]')}
+              echo "dependencies=$PATH_NEEDS"
+              echo "dependencies=$PATH_NEEDS" >> $GITHUB_OUTPUT
+
+              MATRIX_JSON={\"include\":$(echo $JSON_OBJECT | jq 'keys | .[]' -c)}
               echo "matrix = $MATRIX_JSON"
               echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
         shell: bash
   
   build:
@@ -91,7 +97,7 @@ jobs:
 
       - name: Build and Test
         run: |
-          echo "Building and testing ${{ matrix.key }} :  ${{ matrix.needs }}"
+          echo "Building and testing ${{ matrix.include }} :  ${{ fromJson(needs.find_packages.outputs.dependencies) }}"
         # Add your actual build and test commands here
 
     # Define dependencies dynamically using the needs field
