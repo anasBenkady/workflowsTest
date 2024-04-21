@@ -26,9 +26,8 @@ jobs:
               echo "Found package.json files:"
               echo "$PACKAGES"
 
-              MATRIX_JSON={\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}
+              MATRIX_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
               echo "matrix = $MATRIX_JSON"
-              echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
               PACKAGE_NAMES=()
 
@@ -46,7 +45,11 @@ jobs:
               # Convert the array of package names to a JSON array
               PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
               echo "dependencies = $PACKAGE_NAMES_JSON"
-              echo "dependencies=$PACKAGE_NAMES_JSON" >> $GITHUB_OUTPUT
+
+              # New code to iterate over the package.json files and extract dependencies
+              DEPENDENCIES_MAP="{\"dependencies\": $(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({(. | rtrimstr("/package.json")): (if [ -f . ] then jq -r ".dependencies, .devDependencies" else null end)})')}"
+              echo "dependencies map = $DEPENDENCIES_MAP"
+
         shell: bash
   
   build:
