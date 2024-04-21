@@ -9,29 +9,24 @@ jobs:
   find_packages:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-      dependencies: ${{ steps.set-matrix.outputs.dependencies }}
+      matrix: ${{ steps.dependencies-step.outputs.package }}
+      dependencies: ${{ steps.dependencies-step.outputs.dependencies }}
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install jq
-        run: sudo apt-get install jq
-
-      - id: set-matrix
+      - id: dependencies-step
         name: Finding packages and their dependencies in shared libraries
         run: |
             echo "Finding package.json files..."
             # Find all package.json files, excluding those in node_modules directories
             PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*')
 
-            echo "Found package.json files:"
-            echo "$PACKAGES"
-
-            MATRIX_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
-            echo "matrix = $MATRIX_JSON"
-            echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+            PACKAGES_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
+            echo "Found packages = $PACKAGES_JSON"
+            # echo "package=$PACKAGES_JSON" >> $GITHUB_OUTPUT
 
             PACKAGE_NAMES=()
+            PACKAGE_PATHS_MAP="{}"
 
             # Iterate over each package.json file
             for PACKAGE in $PACKAGES; do
@@ -39,8 +34,10 @@ jobs:
                 if [ -f "$PACKAGE" ]; then
                     NAME=$(jq -r '.name' "$PACKAGE" | tr -d '\n' | tr -d '\r')
                     if [ "$NAME" != "null" ]; then
-                         PACKAGE_NAME=$(jq -r '.name' "$PACKAGE")
-                         PACKAGE_NAMES+=("$PACKAGE_NAME")
+                        PACKAGE_NAME=$(jq -r '.name' "$PACKAGE")
+                        PACKAGE_NAMES+=("$PACKAGE_NAME")
+                        PACKAGE_PATH=$(echo $PACKAGE | sed 's|/package.json||')
+                        PACKAGE_PATHS_MAP=$(echo $PACKAGE_PATHS_MAP | jq --arg name "$PACKAGE_NAME" --arg path "$PACKAGE_PATH" '. + {($name): $path}')
                     fi
                 fi
             done
@@ -48,14 +45,14 @@ jobs:
             # Convert the array of package names to a JSON array
             PACKAGE_NAMES_JSON=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
             echo "dependencies = $PACKAGE_NAMES_JSON"
-            
+
             # New code to iterate over the package.json files and extract dependencies
             DEPENDENCIES_MAP="{"
             for PACKAGE in $PACKAGES; do
                 if [ -f "$PACKAGE" ]; then
                     # Filter and collect dependencies that are in the PACKAGE_NAMES_JSON
-                    FILTERED_DEPS=$(jq -r --argjson packageNames "$PACKAGE_NAMES_JSON" \
-                        '.dependencies | to_entries | map(select(.key as $k | $packageNames | index($k))) | map("\"" + .key + "\"") | join(",")' "$PACKAGE")
+                    FILTERED_DEPS=$(jq -r --argjson packageNames "$PACKAGE_NAMES_JSON" --argjson pathsMap "$PACKAGE_PATHS_MAP" \
+                        '.dependencies | to_entries | map(select(.key as $k | $packageNames | index($k))) | map($pathsMap[.key] // "") | map(select(. != "")) | map("\"" + . + "\"") | join(",")' "$PACKAGE")
                     
                     # Format the output to match the required structure
                     if [[ $FILTERED_DEPS != "" ]]; then
@@ -70,81 +67,5 @@ jobs:
             DEPENDENCIES_MAP+="}"
 
             echo "dependencies map = $DEPENDENCIES_MAP"
-            echo "dependencies=$DEPENDENCIES_MAP" >> $GITHUB_OUTPUT
+
         shell: bash
-  
-  publish_package:
-    needs: find_packages
-    runs-on: ubuntu-latest
-    environment: Dev
-    strategy:
-      fail-fast: false
-      matrix: ${{fromJson(needs.find_packages.outputs.matrix)}}
-    defaults:
-      run:
-        working-directory: ${{ matrix.package }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: '20'
-
-      - name: Configure npm registry
-        run: |
-              echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
-              echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
-      
-      - name: Define current package dependencies
-        run: |
-            DEPENDENCIES_JSON='${{ needs.find_packages.outputs.dependencies }}'
-            DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
-            echo "PACKAGE_DEPENDENCIES=$DEPS_JSON" >> $GITHUB_ENV
-
-            # Fetching the dependencies JSON from the output of a previous job
-            DEPENDENCIES_JSON='${{ needs.find_packages.outputs.dependencies }}'
-
-            # Extracting the specific package dependencies using jq
-            DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
-
-            # Calculate the length of the dependencies array
-            ARRAY_LENGTH=$(echo $DEPS_JSON | jq '. | length')
-
-            # Conditional sleep based on the length of the array
-            sleep $((10 * ARRAY_LENGTH))
-      
-      - name: Unpublish existing package version
-        run: npm unpublish --force
-        continue-on-error: true
-
-      - name: Check packages availability
-        run: |
-              # Convert JSON array to Bash array using jq
-              readarray -t packages < <(echo "$PACKAGE_DEPENDENCIES" | jq -r '.[]')
-
-              # Function to check package availability
-              check_packages() {
-                for package in "${packages[@]}"; do
-                  # Use npm info to check if the package is available
-                  if ! npm info "$package" > /dev/null 2>&1; then
-                    echo "Package $package is not available."
-                    return 1
-                  fi
-                done
-                echo "All packages are available."
-                return 0
-              }
-
-              # Loop until all packages are available
-              while ! check_packages; do
-                echo "Not all packages are available yet. Retrying in 30 seconds..."
-                sleep 30
-              done
-
-      - name: Install dependencies for publishing
-        run: npm install        
-
-      - name: publish the new package version
-        run: npm publish
-        
