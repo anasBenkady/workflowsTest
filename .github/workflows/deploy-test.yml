@@ -79,7 +79,7 @@ jobs:
               done
               echo "Package dependencies map: $JSON_OBJECT"
 
-              PATH_NEEDS=$(echo $JSON_OBJECT | jq -c '[to_entries[] | {key: .key, needs: .value}]')
+              PATH_NEEDS=$JSON_OBJECT
               echo "dependencies = $PATH_NEEDS"
               echo "dependencies=$PATH_NEEDS" >> $GITHUB_OUTPUT
 
