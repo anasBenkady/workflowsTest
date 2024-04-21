@@ -30,6 +30,23 @@ jobs:
               echo "matrix = $MATRIX_JSON"
               echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
+              PACKAGE_NAMES=()
+
+              # Iterate over each package.json file
+              for PACKAGE in $PACKAGES; do
+                  # Extract the name field from the package.json file
+                  if [ -f "$PACKAGE" ]; then
+                      NAME=$(jq -r '.name' "$PACKAGE")
+                      if [ "$NAME" != "null" ]; then
+                          PACKAGE_NAMES+=("$NAME")
+                      fi
+                  fi
+              done
+
+              # Convert the array of package names to a JSON array
+              PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
+              echo "dependencies = $PACKAGE_NAMES_JSON"
+              echo "dependencies=$PACKAGE_NAMES_JSON" >> $GITHUB_OUTPUT
         shell: bash
   
   build:
