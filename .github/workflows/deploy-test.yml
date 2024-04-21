@@ -25,8 +25,8 @@ jobs:
               echo "Found package.json files:"
               echo "$PACKAGES"
 
-              # Prepare an associative array to store file paths and package names
-              declare -A PACKAGE_MAP
+              # Start JSON object
+              JSON_OBJECT="{}"
 
               # Loop over each found package.json file
               for PACKAGE_PATH in $PACKAGES
@@ -34,12 +34,11 @@ jobs:
                   # Read the 'name' attribute from package.json
                   if [ -f "$PACKAGE_PATH" ]; then
                       PACKAGE_NAME=$(jq -r '.name' "$PACKAGE_PATH")
-                      # Using the full path as the key and the package name as the value
-                      PACKAGE_MAP["$PACKAGE_PATH"]="$PACKAGE_NAME"
+                      # Build JSON object by injecting each key-value pair
+                      JSON_OBJECT=$(echo "$JSON_OBJECT" | jq --arg path "$PACKAGE_PATH" --arg name "$PACKAGE_NAME" '. + {($path): $name}')
                   fi
               done
 
-              # Output the map as a JSON object
-              JSON_OBJECT=$(jq -n '$ARGS.positional | from_entries' --args -- "${PACKAGE_MAP[@]}")
               echo "Package map: $JSON_OBJECT"
+
         shell: bash
