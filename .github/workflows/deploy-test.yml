@@ -9,8 +9,8 @@ jobs:
   find_packages:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.dependencies-step.outputs.package }}
-      dependencies: ${{ steps.dependencies-step.outputs.dependencies }}
+      packages: ${{ steps.dependencies-step.outputs.package }}
+      dependencies-map: ${{ steps.dependencies-step.outputs.dependencies-map }}
     steps:
       - uses: actions/checkout@v3
 
@@ -23,7 +23,7 @@ jobs:
 
             PACKAGES_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
             echo "Found packages = $PACKAGES_JSON"
-            # echo "package=$PACKAGES_JSON" >> $GITHUB_OUTPUT
+            echo "package=$PACKAGES_JSON" >> $GITHUB_OUTPUT
 
             PACKAGE_NAMES=()
             PACKAGE_PATHS_MAP="{}"
@@ -67,5 +67,26 @@ jobs:
             DEPENDENCIES_MAP+="}"
 
             echo "dependencies map = $DEPENDENCIES_MAP"
-
+            echo "dependencies-map=$DEPENDENCIES_MAP" >> $GITHUB_OUTPUT
         shell: bash
+
+  order_packages:
+    needs: find_packages
+    runs-on: ubuntu-latest
+    environment: Dev
+    env:
+      PACKAGES: ${{ needs.find_packages.outputs.packages }}
+      DEPENDENCIES_MAP: ${{ needs.find_packages.outputs.dependencies-map }}
+    outputs:
+        ordered-packages: ${{ steps.order-packages-step.outputs.ordered-packages }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: order-packages-step
+        name: Ordering the packages array
+        run: | 
+          echo "PACKAGES : $PACKAGES"
+          echo "DEPENDENCIES_MAP : $DEPENDENCIES_MAP"
+
+
+      
