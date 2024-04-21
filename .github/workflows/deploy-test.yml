@@ -28,33 +28,33 @@ jobs:
           echo "matrix={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}" >> $GITHUB_OUTPUT
         shell: bash
 
-publish:
-    needs: find_packages
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix: ${{fromJson(needs.setup_matrix.outputs.matrix)}}
-    defaults:
-      run:
-        working-directory: ${{ matrix.package }}
-    steps:
-      - name: Ensure jq is installed
-        run: sudo apt-get install -y jq
+  publish:
+      needs: find_packages
+      runs-on: ubuntu-latest
+      strategy:
+        fail-fast: false
+        matrix: ${{fromJson(needs.setup_matrix.outputs.matrix)}}
+      defaults:
+        run:
+          working-directory: ${{ matrix.package }}
+      steps:
+        - name: Ensure jq is installed
+          run: sudo apt-get install -y jq
 
-      - name: Check for dependencies and echo them
-        run: |
-          if [ -f package.json ]; then
-            # Extract dependencies that start with 'dev.linkopus' and store in a variable
-            DEPS=$(jq -r '.dependencies | to_entries[] | select(.key | startswith("dev.linkopus")) | "\(.key): \(.value)"' package.json)
-            if [ -n "$DEPS" ]; then
-              echo "Dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}:"
-              echo "$DEPS"
+        - name: Check for dependencies and echo them
+          run: |
+            if [ -f package.json ]; then
+              # Extract dependencies that start with 'dev.linkopus' and store in a variable
+              DEPS=$(jq -r '.dependencies | to_entries[] | select(.key | startswith("dev.linkopus")) | "\(.key): \(.value)"' package.json)
+              if [ -n "$DEPS" ]; then
+                echo "Dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}:"
+                echo "$DEPS"
+              else
+                echo "No dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}."
+              fi
             else
-              echo "No dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}."
+              echo "package.json does not exist in ${{ matrix.package }}"
             fi
-          else
-            echo "package.json does not exist in ${{ matrix.package }}"
-          fi
 
 
 
