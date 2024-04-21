@@ -37,13 +37,14 @@ jobs:
                 if [ -f "$PACKAGE" ]; then
                     NAME=$(jq -r '.name' "$PACKAGE" | tr -d '\n' | tr -d '\r')
                     if [ "$NAME" != "null" ]; then
-                        PACKAGE_NAMES+=("$NAME")
+                         PACKAGE_NAME=$(jq -r '.name' "$PACKAGE")
+                         PACKAGE_NAMES+=("$PACKAGE_NAME")
                     fi
                 fi
             done
 
             # Convert the array of package names to a JSON array
-            PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
+            PACKAGE_NAMES_JSON=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
             echo "dependencies = $PACKAGE_NAMES_JSON"
 
             # New code to iterate over the package.json files and extract filtered dependencies
