@@ -151,13 +151,14 @@ jobs:
           sorted_packages=$(tsort)
 
           # Convert the string into a JSON array of elements
-          formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))')
+          formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq @json)
 
           # Output the formatted JSON for verification
           echo "Formatted JSON array:"
           echo "$formatted_json"
 
-          echo "ordered-packages=$formatted_json" >> $GITHUB_OUTPUT
+          # Properly encode JSON for GitHub Actions output
+          echo "ordered-packages=$(echo "$formatted_json" | jq -sRr @uri)" >> $GITHUB_OUTPUT
 
   publish-to-verdaccio:
     needs: order_packages
