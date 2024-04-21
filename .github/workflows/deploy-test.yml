@@ -73,12 +73,16 @@ jobs:
 
         shell: bash
   
-  build:
+  publish_package:
     needs: find_packages
     runs-on: ubuntu-latest
+    environment: Dev
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.find_packages.outputs.matrix)}}
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -88,4 +92,5 @@ jobs:
             DEPENDENCIES_JSON='${{ needs.find_packages.outputs.dependencies }}'
             DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
             echo "current package: ${{ matrix.package }}" with dependencies: $DEPS_JSON
+            ls
         
