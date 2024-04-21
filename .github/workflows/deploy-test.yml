@@ -70,7 +70,6 @@ jobs:
 
             echo "dependencies map = $DEPENDENCIES_MAP"
             echo "dependencies=$DEPENDENCIES_MAP" >> $GITHUB_OUTPUT
-
         shell: bash
   
   publish_package:
@@ -84,13 +83,55 @@ jobs:
       run:
         working-directory: ${{ matrix.package }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Current package
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '20'
+
+      - name: Configure npm registry
+        run: |
+              echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
+              echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
+      
+      - name: Define current package dependencies
         run: |
             DEPENDENCIES_JSON='${{ needs.find_packages.outputs.dependencies }}'
             DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
-            echo "current package: ${{ matrix.package }}" with dependencies: $DEPS_JSON
-            ls
+            echo "PACKAGE_DEPENDENCIES=$DEPS_JSON" >> $GITHUB_ENV
+      
+      - name: Check packages availability
+        run: |
+              # Convert JSON array to Bash array using jq
+              readarray -t packages < <(echo "$PACKAGE_DEPENDENCIES" | jq -r '.[]')
+
+              # Function to check package availability
+              check_packages() {
+                for package in "${packages[@]}"; do
+                  # Use npm info to check if the package is available
+                  if ! npm info "$package" > /dev/null 2>&1; then
+                    echo "Package $package is not available."
+                    return 1
+                  fi
+                done
+                echo "All packages are available."
+                return 0
+              }
+
+              # Loop until all packages are available
+              while ! check_packages; do
+                echo "Not all packages are available yet. Retrying in 15 seconds..."
+                sleep 15
+              done
+
+      - name: Install dependencies for publishing
+        run: ls # npm install        
+
+      - name: Unpublish existing package version
+        run: ls # npm unpublish --force
+        continue-on-error: true
+
+      - name: publish the new package version
+        run: ls # npm publish
         
