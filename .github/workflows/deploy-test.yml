@@ -75,11 +75,11 @@ jobs:
               done
               echo "Package dependencies map: $JSON_OBJECT"
 
-              PATH_NEEDS={\"include\":$(echo $JSON_OBJECT | jq -c '[to_entries[] | {key: .key, needs: .value}]')}
-              echo "dependencies=$PATH_NEEDS"
+              PATH_NEEDS=$(echo $JSON_OBJECT | jq -c '[to_entries[] | {key: .key, needs: .value}]')
+              echo "dependencies = $PATH_NEEDS"
               echo "dependencies=$PATH_NEEDS" >> $GITHUB_OUTPUT
 
-              MATRIX_JSON={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}
+              MATRIX_JSON=$(echo $JSON_OBJECT | jq 'keys | .[]' -c)
               echo "matrix = $MATRIX_JSON"
               echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
