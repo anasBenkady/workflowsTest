@@ -35,7 +35,7 @@ jobs:
             for PACKAGE in $PACKAGES; do
                 # Extract the name field from the package.json file
                 if [ -f "$PACKAGE" ]; then
-                    NAME=$(jq -r '.name' "$PACKAGE")
+                    NAME=$(jq -r '.name' "$PACKAGE" | tr -d '\n')
                     if [ "$NAME" != "null" ]; then
                         PACKAGE_NAMES+=("$NAME")
                     fi
