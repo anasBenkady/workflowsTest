@@ -55,7 +55,7 @@ jobs:
           else
             echo "package.json does not exist in ${{ matrix.package }}"
           fi
-      shell: bash
+        shell: bash
 
 
 
