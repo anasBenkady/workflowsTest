@@ -18,13 +18,12 @@ jobs:
 
       - id: set-matrix
         run: |
-          PACKAGES_INFO="[]"
-          for PACKAGE in $(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;); do
-            NAME=$(jq -r '.name' $PACKAGE/package.json)
-            LOCAL_DEPS=$(jq -r '.dependencies | to_entries[] | select(.value | startswith("file:")) | .key' $PACKAGE/package.json)
-            PACKAGES_INFO=$(echo $PACKAGES_INFO | jq -c --arg pkg $PACKAGE --arg name "$NAME" --arg deps "$LOCAL_DEPS" '. += [{"package": $pkg, "name": $name, "dependencies": ($deps | split("\n") | map(select(. != "")))]}')
-          done
-          echo "matrix={\"include\":$PACKAGES_INFO}" >> $GITHUB_OUTPUT
+          echo "Finding directories with package.json..."
+          PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
+          echo "Found packages: $PACKAGES"
+          
+          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map(.)')
+          echo "Matrix: $JSON_ARRAY"
+          
+          echo "matrix={\"include\":$(echo $JSON_ARRAY | jq -c '[.[] | {package: .}]')}" >> $GITHUB_OUTPUT
         shell: bash
-
-
