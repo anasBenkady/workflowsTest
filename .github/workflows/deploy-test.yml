@@ -126,12 +126,12 @@ jobs:
               done
 
       - name: Install dependencies for publishing
-        run: ls # npm install        
+        run: npm install        
 
       - name: Unpublish existing package version
-        run: ls # npm unpublish --force
+        run: npm unpublish --force
         continue-on-error: true
 
       - name: publish the new package version
-        run: ls # npm publish
+        run: npm publish
         
