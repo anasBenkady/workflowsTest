@@ -26,7 +26,7 @@ jobs:
               echo "Found package.json files:"
               echo "$PACKAGES"
 
-              MATRIX_JSON=$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": .})')
+              MATRIX_JSON={\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}
               echo "matrix = $MATRIX_JSON"
               echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
