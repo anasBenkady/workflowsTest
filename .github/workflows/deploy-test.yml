@@ -149,7 +149,7 @@ jobs:
           }
 
           # Perform the topological sort
-          readarray -t sorted_packages < <(tsort)
+          sorted_packages=$(tsort)
 
           # Convert the sorted packages to a JSON array and store in a variable
           sorted_packages_json=$(jq -n --argjson pkgs "$(printf '%s\n' "${sorted_packages[@]}" | jq -s .)" '$pkgs')
