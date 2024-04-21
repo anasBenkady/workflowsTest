@@ -29,17 +29,17 @@ jobs:
         shell: bash
 
   publish:
-      needs: find_packages
-      runs-on: ubuntu-latest
-      strategy:
-        fail-fast: false
-        matrix: ${{fromJson(needs.find_packages.outputs.matrix)}}
-      defaults:
-        run:
-          working-directory: ${{ matrix.package }}
+    needs: find_packages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.find_packages.outputs.matrix)}}
+    environment: Dev
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
       steps:
-        - name: Ensure jq is installed
-          run: sudo apt-get install -y jq
+        - uses: actions/checkout@v3
 
         - name: Check for dependencies and echo them
           run: |
@@ -55,6 +55,7 @@ jobs:
             else
               echo "package.json does not exist in ${{ matrix.package }}"
             fi
+        shell: bash
 
 
 
