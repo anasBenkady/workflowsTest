@@ -151,11 +151,13 @@ jobs:
           # Perform the topological sort
           sorted_packages=$(tsort)
 
-          # Convert the sorted packages to a JSON array and store in a variable
-          sorted_packages_json=$(printf '%s\n' "${sorted_packages[@]}" | jq -sR 'split("\n") | map(select(length > 0))')
+          echo "$sorted_packages"
 
-          # Output the JSON for verification
-          echo "Sorted packages in JSON format:"
-          echo "$sorted_packages_json"
+          # Convert the string into a JSON array of elements
+          formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))')
+
+          # Output the formatted JSON for verification
+          echo "Formatted JSON array:"
+          echo "$formatted_json"
 
       
