@@ -38,24 +38,24 @@ jobs:
     defaults:
       run:
         working-directory: ${{ matrix.package }}
-      steps:
-        - uses: actions/checkout@v3
+    steps:
+      - uses: actions/checkout@v3
 
-        - name: Check for dependencies and echo them
-          run: |
-            if [ -f package.json ]; then
-              # Extract dependencies that start with 'dev.linkopus' and store in a variable
-              DEPS=$(jq -r '.dependencies | to_entries[] | select(.key | startswith("dev.linkopus")) | "\(.key): \(.value)"' package.json)
-              if [ -n "$DEPS" ]; then
-                echo "Dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}:"
-                echo "$DEPS"
-              else
-                echo "No dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}."
-              fi
+      - name: Check for dependencies and echo them
+        run: |
+          if [ -f package.json ]; then
+            # Extract dependencies that start with 'dev.linkopus' and store in a variable
+            DEPS=$(jq -r '.dependencies | to_entries[] | select(.key | startswith("dev.linkopus")) | "\(.key): \(.value)"' package.json)
+            if [ -n "$DEPS" ]; then
+              echo "Dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}:"
+              echo "$DEPS"
             else
-              echo "package.json does not exist in ${{ matrix.package }}"
+              echo "No dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}."
             fi
-        shell: bash
+          else
+            echo "package.json does not exist in ${{ matrix.package }}"
+          fi
+      shell: bash
 
 
 
