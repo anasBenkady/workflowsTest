@@ -19,36 +19,45 @@ jobs:
 
       - id: set-matrix
         run: |
-              echo "Finding package.json files..."
-              # Find all package.json files, excluding those in node_modules directories
-              PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*')
+            echo "Finding package.json files..."
+            # Find all package.json files, excluding those in node_modules directories
+            PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*')
 
-              echo "Found package.json files:"
-              echo "$PACKAGES"
+            echo "Found package.json files:"
+            echo "$PACKAGES"
 
-              MATRIX_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
-              echo "matrix = $MATRIX_JSON"
+            MATRIX_JSON="{\"include\":$(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({"package": (. | rtrimstr("/package.json"))})')}"
+            echo "matrix = $MATRIX_JSON"
 
-              PACKAGE_NAMES=()
+            PACKAGE_NAMES=()
 
-              # Iterate over each package.json file
-              for PACKAGE in $PACKAGES; do
-                  # Extract the name field from the package.json file
-                  if [ -f "$PACKAGE" ]; then
-                      NAME=$(jq -r '.name' "$PACKAGE")
-                      if [ "$NAME" != "null" ]; then
-                          PACKAGE_NAMES+=("$NAME")
-                      fi
-                  fi
-              done
+            # Iterate over each package.json file
+            for PACKAGE in $PACKAGES; do
+                # Extract the name field from the package.json file
+                if [ -f "$PACKAGE" ]; then
+                    NAME=$(jq -r '.name' "$PACKAGE")
+                    if [ "$NAME" != "null" ]; then
+                        PACKAGE_NAMES+=("$NAME")
+                    fi
+                fi
+            done
 
-              # Convert the array of package names to a JSON array
-              PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
-              echo "dependencies = $PACKAGE_NAMES_JSON"
+            # Convert the array of package names to a JSON array
+            PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
+            echo "dependencies = $PACKAGE_NAMES_JSON"
 
-              # New code to iterate over the package.json files and extract dependencies
-              DEPENDENCIES_MAP="{\"dependencies\": $(echo "$PACKAGES" | jq -R -s -c 'split("\n")[:-1] | map({(. | rtrimstr("/package.json")): (if [ -f . ] then jq -r ".dependencies, .devDependencies" else null end)})')}"
-              echo "dependencies map = $DEPENDENCIES_MAP"
+            # New code to iterate over the package.json files and extract dependencies
+            DEPENDENCIES_MAP="{\"dependencies\": {"
+            for PACKAGE in $PACKAGES; do
+                if [ -f "$PACKAGE" ]; then
+                    DEP=$(jq -c '{dependencies, devDependencies}' "$PACKAGE")
+                    DEPENDENCIES_MAP+="\"$(echo $PACKAGE | sed 's|/package.json||')\":$DEP,"
+                fi
+            done
+            DEPENDENCIES_MAP+="}}"
+
+            echo "dependencies map = $DEPENDENCIES_MAP"
+
 
         shell: bash
   
