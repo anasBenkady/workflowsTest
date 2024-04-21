@@ -33,7 +33,7 @@ jobs:
       runs-on: ubuntu-latest
       strategy:
         fail-fast: false
-        matrix: ${{needs.setup_matrix.outputs.matrix}}
+        matrix: ${{needs.find_packages.outputs.matrix}}
       defaults:
         run:
           working-directory: ${{ matrix.package }}
