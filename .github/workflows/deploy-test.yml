@@ -72,7 +72,6 @@ jobs:
   order_packages:
     needs: find_packages
     runs-on: ubuntu-latest
-    environment: Dev
     env:
       json_packages: ${{ needs.find_packages.outputs.packages }}
       json_dependencies: ${{ needs.find_packages.outputs.dependencies-map }}
@@ -151,8 +150,6 @@ jobs:
           # Perform the topological sort
           sorted_packages=$(tsort)
 
-          echo "$sorted_packages"
-
           # Convert the string into a JSON array of elements
           formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))')
 
@@ -160,4 +157,39 @@ jobs:
           echo "Formatted JSON array:"
           echo "$formatted_json"
 
-      
+          echo "ordered-packages=$formatted_json" >> $GITHUB_OUTPUT
+
+  publish-to-verdaccio:
+    needs: order_packages
+    runs-on: ubuntu-latest
+    environment: Dev
+    env:
+      packages: ${{ needs.order_packages.outputs.ordered-packages }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Publish packages in order to Verdaccio
+        run: |
+          # Iterate over each package
+          for PACKAGE in $packages; do
+            echo "Processing package in directory $PACKAGE"
+            
+            echo "Navigate into the package directory..."
+            cd $PACKAGE
+
+            echo "Configure npm registry..." 
+            echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
+            echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
+
+            echo "Unpublish existing package version..."
+            npm unpublish --force | true
+
+            echo "Install package dependencies..."
+            npm install
+            
+            echo "Publish the package to Verdaccio..."
+            npm publish
+            
+            echo "Navigate back to the root directory..."
+            cd -
+          done
