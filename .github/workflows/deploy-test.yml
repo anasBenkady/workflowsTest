@@ -43,7 +43,8 @@ jobs:
             done
 
             # Convert the array of package names to a JSON array
-            PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
+            # PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(echo "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split(" ")')" '$names')
+            PACKAGE_NAMES_JSON=$(jq -n --argjson names "$(printf '%s\0' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\u0000")[:-1]')" '$names')
             echo "dependencies = $PACKAGE_NAMES_JSON"
 
             
