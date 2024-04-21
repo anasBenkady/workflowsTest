@@ -99,7 +99,7 @@ jobs:
 
       - name: Build and Test
         run: |
-          echo "Building and testing ${{ matrix.package }} :  ${{ fromJson(needs.find_packages.outputs.dependencies) }}"
+          echo "Building and testing ${{ matrix.package }} :  ${{ fromJson(needs.find_packages.outputs.dependencies)[${{matrix.package}}] }}"
         # Add your actual build and test commands here
 
     # Define dependencies dynamically using the needs field
