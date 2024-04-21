@@ -44,7 +44,6 @@ jobs:
 
             # Convert the array of package names to a JSON array
             PACKAGE_NAMES_JSON=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
-            echo "dependencies = $PACKAGE_NAMES_JSON"
 
             # New code to iterate over the package.json files and extract dependencies
             DEPENDENCIES_MAP="{"
@@ -87,6 +86,48 @@ jobs:
         run: | 
           echo "PACKAGES : $PACKAGES"
           echo "DEPENDENCIES_MAP : $DEPENDENCIES_MAP"
+          # Declare associative arrays for dependencies and in-degrees
+          declare -A dependencies
+          declare -A in_degree
+          # Parse DEPENDENCIES_MAP into associative arrays
+          eval "$(echo "$DEPENDENCIES_MAP" | jq -r 'to_entries | .[] | .key as $k | "dependencies[\$k]=(" + (.value | join(" ")) + ")"; "in_degree[\$k]=0"')"
 
+          # Calculate in-degrees
+          for package in "${!dependencies[@]}"; do
+            for dep in ${dependencies[$package]}; do
+              ((in_degree[$dep]++))
+            done
+          done
+
+          # Initialize queue with packages having zero in-degree
+          queue=()
+          for package in "${PACKAGES[@]}"; do
+            if [[ ${in_degree[$package]} -eq 0 ]]; then
+              queue+=("$package")
+            fi
+          done
+
+          # Result array to hold the sorted order
+          ORDERED_PACKAGES=()
+
+          # Process the queue
+          while [[ ${#queue[@]} -gt 0 ]]; do
+            current="${queue[0]}"
+            queue=("${queue[@]:1}")
+            ORDERED_PACKAGES+=("$current")
+
+            for dep in ${dependencies[$current]}; do
+              ((in_degree[$dep]--))
+              if [[ ${in_degree[$dep]} -eq 0 ]]; then
+                queue+=("$dep")
+              fi
+            done
+          done
+
+          # Print sorted packages
+          echo "Sorted packages based on dependencies:"
+          for pkg in "${ORDERED_PACKAGES[@]}"; do
+            echo "$pkg"
+          done
 
       
