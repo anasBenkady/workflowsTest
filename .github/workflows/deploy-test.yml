@@ -37,7 +37,6 @@ jobs:
               # First, build a map of name to directory
               for PACKAGE_PATH in $PACKAGES
               do
-                  # Trim the '/package.json' part from the path to use as the JSON key
                   PACKAGE_DIR="${PACKAGE_PATH%'/package.json'}"
 
                   # Read the 'name' attribute from package.json
@@ -46,8 +45,6 @@ jobs:
                       PACKAGE_MAP[$PACKAGE_NAME]="$PACKAGE_DIR"
                   fi
               done
-
-              echo $PACKAGE_PATH
 
               # Now, iterate again to find dependencies that match names in the map
               for PACKAGE_PATH in $PACKAGES
@@ -65,17 +62,17 @@ jobs:
                       for DEP in $DEPENDENCIES
                       do
                           if [[ -n "${PACKAGE_MAP[$DEP]}" ]]; then
-                              # Add the directory path corresponding to the dependency
-                              MATCHED_DEPS+=("\"${PACKAGE_MAP[$DEP]}\"")
+                              # Add the package name of the dependency
+                              MATCHED_DEPS+=("\"$DEP\"")
                           fi
                       done
 
                       # Convert matched dependencies to a JSON array
                       if [ ${#MATCHED_DEPS[@]} -gt 0 ]; then
                           DEPS_JSON=$(printf '%s\n' "${MATCHED_DEPS[@]}" | jq -s '.')
-                          JSON_OBJECT=$(echo "$JSON_OBJECT" | jq --arg path "$PACKAGE_DIR" --argjson deps "$DEPS_JSON" '. + {($path): $deps}')
+                          JSON_OBJECT=$(echo "$JSON_OBJECT" | jq --arg path "$PACKAGE_NAME" --argjson deps "$DEPS_JSON" '. + {($path): $deps}')
                       else
-                          JSON_OBJECT=$(echo "$JSON_OBJECT" | jq --arg path "$PACKAGE_DIR" '. + {($path): []}')
+                          JSON_OBJECT=$(echo "$JSON_OBJECT" | jq --arg path "$PACKAGE_NAME" '. + {($path): []}')
                       fi
                   fi
               done
