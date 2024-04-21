@@ -83,14 +83,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.find_packages.outputs.matrix.key)}}
+      matrix: ${{fromJson(needs.find_packages.outputs.matrix)}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Build and Test
         run: |
-          echo "Building and testing ${{ matrix }} :  ${{fromJson(needs.find_packages.outputs.matrix.needs)}}"
+          echo "Building and testing ${{ matrix.key }} :  ${{ matrix.needs }}"
         # Add your actual build and test commands here
 
     # Define dependencies dynamically using the needs field
