@@ -90,7 +90,7 @@ jobs:
 
       - name: Build and Test
         run: |
-          echo "Building and testing ${{ matrix.key }} : ${{ matrix.needs }}"
+          echo "Building and testing ${{ matrix.key }} :  ${{fromJson(matrix.needs)}}"
         # Add your actual build and test commands here
 
     # Define dependencies dynamically using the needs field
