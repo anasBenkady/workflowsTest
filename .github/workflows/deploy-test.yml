@@ -30,57 +30,6 @@ jobs:
               echo "matrix = $MATRIX_JSON"
               echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
-              # Start JSON object
-              JSON_OBJECT="{}"
-              declare -A PACKAGE_MAP
-
-              # First, build a map of name to directory
-              for PACKAGE_PATH in $PACKAGES
-              do
-                  PACKAGE_DIR="${PACKAGE_PATH%'/package.json'}"
-
-                  # Read the 'name' attribute from package.json
-                  if [ -f "$PACKAGE_PATH" ]; then
-                      PACKAGE_NAME=$(jq -r '.name' "$PACKAGE_PATH")
-                      PACKAGE_MAP[$PACKAGE_NAME]="$PACKAGE_DIR"
-                  fi
-              done
-
-              # Now, iterate again to find dependencies that match names in the map
-              for PACKAGE_PATH in $PACKAGES
-              do
-                  PACKAGE_DIR="${PACKAGE_PATH%'/package.json'}"
-
-                  # Initialize empty list of matched dependencies
-                  MATCHED_DEPS=()
-
-                  # Read dependencies and devDependencies from package.json
-                  if [ -f "$PACKAGE_PATH" ]; then
-                      DEPENDENCIES=$(jq -r '.dependencies, .devDependencies | keys[]?' "$PACKAGE_PATH")
-                      
-                      # Check each dependency to see if it's in our map
-                      for DEP in $DEPENDENCIES
-                      do
-                          if [[ -n "${PACKAGE_MAP[$DEP]}" ]]; then
-                              # Add the package name of the dependency
-                              MATCHED_DEPS+=("\"$DEP\"")
-                          fi
-                      done
-
-                      # Convert matched dependencies to a JSON array
-                      if [ ${#MATCHED_DEPS[@]} -gt 0 ]; then
-                          DEPS_JSON=$(printf '%s\n' "${MATCHED_DEPS[@]}" | jq -s '.')
-                          JSON_OBJECT=$(echo "$JSON_OBJECT" | jq --arg path "$PACKAGE_NAME" --argjson deps "$DEPS_JSON" '. + {($path): $deps}')
-                      else
-                          JSON_OBJECT=$(echo "$JSON_OBJECT" | jq --arg path "$PACKAGE_NAME" '. + {($path): []}')
-                      fi
-                  fi
-              done
-              echo "Package dependencies map: $JSON_OBJECT"
-
-              PATH_NEEDS=$(echo $JSON_OBJECT)
-              echo "dependencies = $PATH_NEEDS"
-              echo "dependencies=$PATH_NEEDS" >> $GITHUB_OUTPUT
         shell: bash
   
   build:
@@ -93,9 +42,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Build and Test
+      - name: Current package
         run: |
             DEPENDENCIES_JSON='${{ needs.find_packages.outputs.dependencies }}'
-            DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
-            echo "Building and testing ${{ matrix.package }} with dependencies: $DEPS_JSON"
+            # DEPS_JSON=$(echo $DEPENDENCIES_JSON | jq -c '.["${{ matrix.package }}"]')
+            echo "current package: ${{ matrix.package }}" # with dependencies: $DEPS_JSON
         
