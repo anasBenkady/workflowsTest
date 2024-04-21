@@ -18,52 +18,25 @@ jobs:
 
       - id: set-matrix
         run: |
-          echo "Finding directories with package.json..."
-          PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
-          echo "Found packages: $PACKAGES"
-          
-          # Create a JSON array of objects, each containing the package directory and name
-          JSON_ARRAY=$(echo "$PACKAGES" | jq -R -s 'split("\n")[:-1] | map({"package": ., "name": (input_filename + "/" + . + "/package.json" | . as $file | try input($file) | fromjson.name catch "Unknown")})')
-          echo "JSON Array: $JSON_ARRAY"
-          
-          # Format for matrix usage
-          MATRIX_JSON=$(echo "$JSON_ARRAY" | jq -c '{include: .}')
-          echo "Matrix: $MATRIX_JSON"
-          
-          # Set output for matrix
-          echo "matrix=$MATRIX_JSON" >> $GITHUB_ENV
+              echo "Finding directories with package.json..."
+                # Find all directories containing package.json, excluding node_modules directories
+                PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \;)
+                echo "Found packages: $PACKAGES"
+
+                # Prepare an array to store package names
+                PACKAGE_NAMES=()
+
+                # Loop over each directory containing package.json
+                for PACKAGE_DIR in $PACKAGES
+                do
+                    # Read the 'name' attribute from package.json
+                    if [ -f "$PACKAGE_DIR/package.json" ]; then
+                        PACKAGE_NAME=$(jq -r '.name' "$PACKAGE_DIR/package.json")
+                        PACKAGE_NAMES+=("$PACKAGE_NAME")
+                    fi
+                done
+
+                # Convert package names array to JSON array
+                JSON_ARRAY=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
+                echo "Package names: $JSON_ARRAY"
         shell: bash
-
-  find_dependencies:
-    needs: find_packages
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix: ${{fromJson(needs.find_packages.outputs.matrix)}}
-    environment: Dev
-    defaults:
-      run:
-        working-directory: ${{ matrix.package }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Check for dependencies and echo them
-        run: |
-          if [ -f package.json ]; then
-            # Extract dependencies that start with 'dev.linkopus' and store in a variable
-            DEPS=$(jq -r '.dependencies | to_entries[] | select(.key | startswith("dev.linkopus")) | "\(.key): \(.value)"' package.json)
-            if [ -n "$DEPS" ]; then
-              echo "Dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}:"
-              echo "$DEPS"
-            else
-              echo "No dependencies starting with 'dev.linkopus' found in ${{ matrix.package }}."
-            fi
-          else
-            echo "package.json does not exist in ${{ matrix.package }}"
-          fi
-        shell: bash
-
-
-
-
-
