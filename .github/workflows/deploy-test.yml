@@ -120,7 +120,7 @@ jobs:
               while [[ ${#queue[@]} -gt 0 ]]; do
                   local node="${queue[0]}"
                   queue=("${queue[@]:1}")
-                  result+=("$node")
+                  result=("$node" "${result[@]}")  # Push to front to reverse the order
                   for edge in "${nodes[@]}"; do
                       IFS=',' read -r src dst <<< "$edge"
                       if [[ $src == "$node" ]]; then
@@ -137,9 +137,10 @@ jobs:
 
           # Call tsort and handle the output
           sorted_packages=$(tsort)
-          echo "Sorted packages: $sorted_packages"
+          echo "Sorted packages in descending order:"
           for pkg in $sorted_packages; do
               echo "$pkg"
           done
+
 
       
