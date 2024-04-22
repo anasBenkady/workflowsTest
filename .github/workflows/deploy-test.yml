@@ -171,8 +171,11 @@ jobs:
 
       - name: Publish packages in order to Verdaccio
         run: |
+          # Convert JSON string to bash array
+          readarray -t packages < <(echo $packages_json | jq -r '.[]')
+
           # Iterate over each package
-          for PACKAGE in $packages; do
+          for PACKAGE in "${packages[@]}"; do
             echo "Processing package in directory $PACKAGE"
             
             echo "Navigate into the package directory..."
@@ -183,13 +186,13 @@ jobs:
             echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
 
             echo "Unpublish existing package version..."
-            npm unpublish --force | true
+            # npm unpublish --force || true  # Use || to handle potential failure gracefully
 
             echo "Install package dependencies..."
-            npm install
+            # npm install
             
             echo "Publish the package to Verdaccio..."
-            npm publish
+            # npm publish
             
             echo "Navigate back to the root directory..."
             cd -
