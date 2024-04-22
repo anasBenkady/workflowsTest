@@ -8,7 +8,32 @@
 
     import { sendMessage,consumeMessages } from 'dev.linkopus.rabbitmqclient';
 
-**Use the functions in your code:**
+**sendMessage function:**
+ 
+Sends a message to a specified RabbitMQ exchange and routing key. The apiKey and message content are included within the request object.
 
-    sendMessage('exchange', 'routingKey', 'message', 'apiKey')
-    consumeMessages('exchange', 'routingKey', 'apiKey', callbackFunction)
+    import { createLogger } from 'dev.linkopus.logger'; // Ensure to import Logger
+
+    // Function call to send a message
+    sendMessage(createLogger)(
+        'exchange',           // Exchange to publish the message
+        'routingKey',         // Routing key for the message
+        { apikey: 'apiKey', data: 'Hello RabbitMQ!' }, // Request object with API key and message
+        'consumerApiKey'      // Consumer API key if needed
+    );
+
+**consumeMessages function:**
+
+Consumes messages from a specified RabbitMQ exchange and routing key using a callback to handle the messages.
+
+    import { createLogger } from 'dev.linkopus.logger'; // Ensure to import Logger
+
+    // Function call to consume messages
+    consumeMessages(createLogger)(
+        'exchange',          // Exchange to subscribe
+        'routingKey',        // Routing key to bind
+        'apiKey',            // API key for the consumer
+        (content, key) => {  // Callback function to handle received messages
+            console.log(`Message received: ${content} with routingKey: ${key}`);
+        }
+    );
