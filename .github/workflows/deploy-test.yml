@@ -153,34 +153,31 @@ jobs:
           echo "$sorted_packages"
 
           # Ensure that the input string is handled safely
-          # formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq -c)
+          formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq -c)
 
           # Output the formatted JSON for verification
-          # echo "Formatted JSON array:"
-          # echo "$formatted_json"
+          echo "Formatted JSON array:"
+          echo "$formatted_json"
 
           # Properly encode JSON for GitHub Actions output
-          # echo "ordered-packages=$(echo "$sorted_packages")" >> $GITHUB_OUTPUT
-          echo "ordered-packages=$(echo "$sorted_packages")" >> $GITHUB_OUTPUT
-
+          echo "ordered-packages=$(echo "$formatted_json")" >> $GITHUB_OUTPUT
 
   publish-to-verdaccio:
     needs: order_packages
     runs-on: ubuntu-latest
     environment: Dev
     env:
-      packages: ${{ needs.order_packages.outputs.ordered-packages }}
+      packages_json: ${{ needs.order_packages.outputs.ordered-packages }}
     steps:
       - uses: actions/checkout@v3
 
       - name: Publish packages in order to Verdaccio
         run: |
           # Convert JSON string to bash array
-          # readarray -t packages < <(echo $packages_json | jq -r '.[]')
+          readarray -t packages < <(echo $packages_json | jq -r '.[]')
 
           # Iterate over each package
-          # for PACKAGE in "${packages[@]}"; do
-          for PACKAGE in "$packages"; do
+          for PACKAGE in "${packages[@]}"; do
             echo "Processing package in directory $PACKAGE"
             
             echo "Navigate into the package directory..."
