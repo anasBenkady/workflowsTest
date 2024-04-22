@@ -159,25 +159,25 @@ jobs:
 
           # Iterate over each package
           for PACKAGE in "${packages[@]}"; do
-            echo "*************** Processing package in directory $PACKAGE ***************"
+            echo "    ***************** Processing package in directory $PACKAGE *****************    "
             
-            echo "*************** Navigate into the package directory..."
+            echo "******** Navigate into the package directory..."
             cd $PACKAGE
 
-            echo "*************** Configure npm registry..." 
+            echo "******** Configure npm registry..." 
             echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
             echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
 
-            echo ""*************** Unpublish existing package version..."
-            npm unpublish --force || true  # Use || to handle potential failure gracefully
+            echo ""******* Unpublish existing package version..."
+            npm unpublish --force || true 
 
-            echo ""*************** Install package dependencies..."
+            echo ""******* Install package dependencies..."
             npm install
             
-            echo ""*************** Publish the package to Verdaccio..."
+            echo ""******* Publish the package to Verdaccio..."
             npm publish
             
-            echo ""*************** Navigate back to the root directory..."
+            echo ""******* Navigate back to the root directory..."
             cd -
 
             echo
