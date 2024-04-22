@@ -18,15 +18,15 @@ jobs:
             
             - name: Configure npm registry
               run: |
-                echo "npm registry"
-                ls
+                echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
+                echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
             
             - name: Unpublish existing package version
-              run: echo "unpublish" # npm unpublish --force
+              run: npm unpublish --force
               continue-on-error: true
 
             - name: Install package dependencies
-              run: echo "install deps" # npm install
+              run: npm install
 
             - name: Publish CommonMessages package to Verdaccio
-              run: echo "publish to verdaccio" # npm publish
+              run: npm publish

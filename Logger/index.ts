@@ -56,6 +56,4 @@ const logger = (callingModule?: NodeModule, path?: string): winston.Logger => {
   })
 }
 
-console.log('anas')
-
 export default logger
