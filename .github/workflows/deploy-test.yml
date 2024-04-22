@@ -198,5 +198,8 @@ jobs:
             
             echo "Navigate back to the root directory..."
             cd -
+            
+            echo
+            echo
           done
         shell: bash
