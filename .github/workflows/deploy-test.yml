@@ -150,6 +150,8 @@ jobs:
           # Perform the topological sort
           sorted_packages=$(tsort)
 
+          echo "$sorted_packages"
+
           # Convert the string into a JSON array of elements
           formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq @json)
 
