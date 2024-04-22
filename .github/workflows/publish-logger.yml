@@ -1,4 +1,4 @@
-name: Publish Logger package to Verdaccio
+name: Publish Logger package to Verdaccio in development environment
 
 on:
     push:

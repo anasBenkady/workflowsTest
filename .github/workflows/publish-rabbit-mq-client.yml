@@ -1,4 +1,4 @@
-name: Publish RabbitMqClient package to Verdaccio
+name: Publish RabbitMqClient package to Verdaccio in development environment
 
 on:
     push:

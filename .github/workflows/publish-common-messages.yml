@@ -1,4 +1,4 @@
-name: Publish CommonMessages package to Verdaccio
+name: Publish CommonMessages package to Verdaccio in development environment
 
 on:
     push:
