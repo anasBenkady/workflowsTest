@@ -153,11 +153,11 @@ jobs:
           echo "$sorted_packages"
 
           # Convert the string into a JSON array of elements
-          formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq @json)
+          formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq -c)
 
           # Output the formatted JSON for verification
           echo "Formatted JSON array:"
-          echo "$formatted_json"
+          echo "$formatted_json
 
           # Properly encode JSON for GitHub Actions output
           echo "ordered-packages=$(echo "$formatted_json")" >> $GITHUB_OUTPUT
