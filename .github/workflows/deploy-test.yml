@@ -188,17 +188,17 @@ jobs:
             echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
 
             echo "Unpublish existing package version..."
-            # npm unpublish --force || true  # Use || to handle potential failure gracefully
+            npm unpublish --force || true  # Use || to handle potential failure gracefully
 
             echo "Install package dependencies..."
-            # npm install
+            npm install
             
             echo "Publish the package to Verdaccio..."
-            # npm publish
+            npm publish
             
             echo "Navigate back to the root directory..."
             cd -
-            
+
             echo
             echo
           done
