@@ -168,16 +168,16 @@ jobs:
             echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
             echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
 
-            echo ""******* Unpublish existing package version..."
-            npm unpublish --force || true 
+            echo "******* Unpublish existing package version..."
+            npm unpublish --force --loglevel verbose || true 
 
-            echo ""******* Install package dependencies..."
-            npm install
-            
-            echo ""******* Publish the package to Verdaccio..."
-            npm publish
-            
-            echo ""******* Navigate back to the root directory..."
+            echo "******* Install package dependencies..."
+            npm install --loglevel verbose
+
+            echo "******* Publish the package to Verdaccio..."
+            npm publish --loglevel verbose
+
+            echo "******* Navigate back to the root directory..."
             cd -
 
             echo
