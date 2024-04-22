@@ -173,6 +173,7 @@ jobs:
         run: |
           # Convert JSON string to bash array
           readarray -t packages < <(echo $packages_json | jq -r '.[]')
+          echo "packages :  $packages_json"
           echo "${packages[@]}"
 
           # Iterate over each package
