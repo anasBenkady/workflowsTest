@@ -18,7 +18,6 @@ jobs:
         name: Finding packages and their dependencies in shared libraries
         run: |
             echo "Finding package.json files..."
-            # Find all package.json files, excluding those in node_modules directories
             PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*')
 
             PACKAGES_JSON=$(echo "$PACKAGES" | sed 's#/package.json##' | jq -R -s -c 'split("\n")[:-1]')
@@ -28,7 +27,6 @@ jobs:
             PACKAGE_NAMES=()
             PACKAGE_PATHS_MAP="{}"
 
-            # Iterate over each package.json file
             for PACKAGE in $PACKAGES; do
                 # Extract the name field from the package.json file
                 if [ -f "$PACKAGE" ]; then
@@ -42,10 +40,8 @@ jobs:
                 fi
             done
 
-            # Convert the array of package names to a JSON array
             PACKAGE_NAMES_JSON=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
 
-            # New code to iterate over the package.json files and extract dependencies
             DEPENDENCIES_MAP="{"
             for PACKAGE in $PACKAGES; do
                 if [ -f "$PACKAGE" ]; then
@@ -61,7 +57,6 @@ jobs:
                     fi
                 fi
             done
-            # Remove the trailing comma to ensure valid JSON format
             DEPENDENCIES_MAP=${DEPENDENCIES_MAP%,}
             DEPENDENCIES_MAP+="}"
 
@@ -83,18 +78,15 @@ jobs:
       - id: ordered-packages
         name: Ordering the packages array
         run: | 
-          # Convert JSON array to Bash array
           mapfile -t PACKAGES < <(echo $json_packages | jq -r '.[]')
 
           # Declare associative array for dependencies
           declare -A DEPENDENCIES_MAP
 
-          # Populate the DEPENDENCIES_MAP from JSON input
           for pkg in "${PACKAGES[@]}"; do
               # Extract dependencies for the package
               dependencies=$(echo $json_dependencies | jq -r --arg pkg "$pkg" '.[$pkg] | @csv' | tr -d '"')
 
-              # Split dependencies and populate the map
               IFS=',' read -r -a deps <<< "$dependencies"
               for dep in "${deps[@]}"; do
                   if [[ -n "$dep" ]]; then
@@ -109,18 +101,15 @@ jobs:
               local -A in_degree
               local -a result
 
-              # Initialize in-degree of each package
               for pkg in "${PACKAGES[@]}"; do
                   in_degree[$pkg]=0
               done
 
-              # Calculate in-degree
               for node in "${nodes[@]}"; do
                   IFS=',' read -r src dst <<< "$node"
                   ((in_degree[$dst]++))
               done
 
-              # Find all nodes with in-degree 0
               local -a queue
               for pkg in "${PACKAGES[@]}"; do
                   if [[ ${in_degree[$pkg]} -eq 0 ]]; then
@@ -128,11 +117,10 @@ jobs:
                   fi
               done
 
-              # Process the queue
               while [[ ${#queue[@]} -gt 0 ]]; do
                   local node="${queue[0]}"
                   queue=("${queue[@]:1}")
-                  result=("$node" "${result[@]}")  # Reverse order by pushing to front
+                  result=("$node" "${result[@]}")  
                   for edge in "${nodes[@]}"; do
                       IFS=',' read -r src dst <<< "$edge"
                       if [[ $src == "$node" ]]; then
@@ -149,17 +137,11 @@ jobs:
 
           # Perform the topological sort
           sorted_packages=$(tsort)
-
-          echo "$sorted_packages"
-
-          # Ensure that the input string is handled safely
           formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq -c)
 
-          # Output the formatted JSON for verification
-          echo "Formatted JSON array:"
+          echo "Ordered packages installation:"
           echo "$formatted_json"
 
-          # Properly encode JSON for GitHub Actions output
           echo "ordered-packages=$(echo "$formatted_json")" >> $GITHUB_OUTPUT
 
   publish-to-verdaccio:
@@ -173,30 +155,29 @@ jobs:
 
       - name: Publish packages in order to Verdaccio
         run: |
-          # Convert JSON string to bash array
           readarray -t packages < <(echo $packages_json | jq -r '.[]')
 
           # Iterate over each package
           for PACKAGE in "${packages[@]}"; do
-            echo "Processing package in directory $PACKAGE"
+            echo "*************** Processing package in directory $PACKAGE ***************"
             
-            echo "Navigate into the package directory..."
+            echo "*************** Navigate into the package directory..."
             cd $PACKAGE
 
-            echo "Configure npm registry..." 
+            echo "*************** Configure npm registry..." 
             echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
             echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
 
-            echo "Unpublish existing package version..."
+            echo ""*************** Unpublish existing package version..."
             npm unpublish --force || true  # Use || to handle potential failure gracefully
 
-            echo "Install package dependencies..."
+            echo ""*************** Install package dependencies..."
             npm install
             
-            echo "Publish the package to Verdaccio..."
+            echo ""*************** Publish the package to Verdaccio..."
             npm publish
             
-            echo "Navigate back to the root directory..."
+            echo ""*************** Navigate back to the root directory..."
             cd -
 
             echo
