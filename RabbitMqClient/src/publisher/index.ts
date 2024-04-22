@@ -56,5 +56,3 @@ export const sendMessage = (createLogger: ((callingModule?: NodeModule, path?: s
       }
     }
 }
-
-console.log('anas')
