@@ -12,6 +12,9 @@ jobs:
     publish-to-verdaccio:
         runs-on: ubuntu-latest
         environment: Dev
+        defaults:
+          run:
+            working-directory: './CommonMessages'
         steps:
             - name: Checkout code
               uses: actions/checkout@v2
