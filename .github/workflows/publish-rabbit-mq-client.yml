@@ -1,12 +1,12 @@
-name: Publish CommonMessages package to Verdaccio
+name: Publish RabbitMqClient package to Verdaccio
 
 on:
     push:
       branches:
         - development
       paths:
-        - 'CommonMessages/**'
-        - '.github/workflows/publish-commonmessages.yml'
+        - 'RabbitMqClient/**'
+        - '.github/workflows/publish-rabbit-mq-client.yml'
 
 jobs:
     publish-to-verdaccio:
@@ -14,7 +14,7 @@ jobs:
         environment: Dev
         defaults:
           run:
-            working-directory: './CommonMessages'
+            working-directory: './RabbitMqClient'
         steps:
             - name: Checkout code
               uses: actions/checkout@v2
