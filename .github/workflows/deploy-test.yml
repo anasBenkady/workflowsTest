@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       cache-key: ${{ steps.cache-keys.outputs.key }}
+    environment: Dev
     defaults:
       run:
         working-directory: ./CommonMessages
@@ -49,6 +50,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     needs: test
+    environment: Dev
     defaults:
       run:
         working-directory: ./CommonMessages
