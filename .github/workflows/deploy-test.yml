@@ -1,4 +1,4 @@
-name: Publish Packages to Verdaccio
+name: Node.js CI
 
 on:
   push:
@@ -6,181 +6,65 @@ on:
       - development
 
 jobs:
-  find_packages:
+  test:
     runs-on: ubuntu-latest
     outputs:
-      packages: ${{ steps.dependencies-step.outputs.package }}
-      dependencies-map: ${{ steps.dependencies-step.outputs.dependencies-map }}
+      cache-key: ${{ steps.cache-keys.outputs.key }}
+    defaults:
+      run:
+        working-directory: ./CommonMessages
+    needs: setup
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
-      - id: dependencies-step
-        name: Finding packages and their dependencies in shared libraries
-        run: |
-            echo "Finding package.json files..."
-            PACKAGES=$(find . -name 'package.json' -not -path '*/node_modules/*')
+      - name: Cache node modules
+        uses: actions/cache@v2
+        id: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-            PACKAGES_JSON=$(echo "$PACKAGES" | sed 's#/package.json##' | jq -R -s -c 'split("\n")[:-1]')
-            echo "Found packages = $PACKAGES_JSON"
-            echo "package=$PACKAGES_JSON" >> $GITHUB_OUTPUT
-
-            PACKAGE_NAMES=()
-            PACKAGE_PATHS_MAP="{}"
-
-            for PACKAGE in $PACKAGES; do
-                # Extract the name field from the package.json file
-                if [ -f "$PACKAGE" ]; then
-                    NAME=$(jq -r '.name' "$PACKAGE" | tr -d '\n' | tr -d '\r')
-                    if [ "$NAME" != "null" ]; then
-                        PACKAGE_NAME=$(jq -r '.name' "$PACKAGE")
-                        PACKAGE_NAMES+=("$PACKAGE_NAME")
-                        PACKAGE_PATH=$(echo $PACKAGE | sed 's|/package.json||')
-                        PACKAGE_PATHS_MAP=$(echo $PACKAGE_PATHS_MAP | jq --arg name "$PACKAGE_NAME" --arg path "$PACKAGE_PATH" '. + {($name): $path}')
-                    fi
-                fi
-            done
-
-            PACKAGE_NAMES_JSON=$(printf '%s\n' "${PACKAGE_NAMES[@]}" | jq -R -s -c 'split("\n")[:-1]')
-
-            DEPENDENCIES_MAP="{"
-            for PACKAGE in $PACKAGES; do
-                if [ -f "$PACKAGE" ]; then
-                    # Filter and collect dependencies that are in the PACKAGE_NAMES_JSON
-                    FILTERED_DEPS=$(jq -r --argjson packageNames "$PACKAGE_NAMES_JSON" --argjson pathsMap "$PACKAGE_PATHS_MAP" \
-                        '.dependencies | to_entries | map(select(.key as $k | $packageNames | index($k))) | map($pathsMap[.key] // "") | map(select(. != "")) | map("\"" + . + "\"") | join(",")' "$PACKAGE")
-                    
-                    # Format the output to match the required structure
-                    if [[ $FILTERED_DEPS != "" ]]; then
-                        DEPENDENCIES_MAP+="\"$(echo $PACKAGE | sed 's|/package.json||')\":[$FILTERED_DEPS],"
-                    else
-                        DEPENDENCIES_MAP+="\"$(echo $PACKAGE | sed 's|/package.json||')\":[],"
-                    fi
-                fi
-            done
-            DEPENDENCIES_MAP=${DEPENDENCIES_MAP%,}
-            DEPENDENCIES_MAP+="}"
-
-            echo "dependencies map = $DEPENDENCIES_MAP"
-            echo "dependencies-map=$DEPENDENCIES_MAP" >> $GITHUB_OUTPUT
-        shell: bash
-
-  order_packages:
-    needs: find_packages
-    runs-on: ubuntu-latest
-    env:
-      json_packages: ${{ needs.find_packages.outputs.packages }}
-      json_dependencies: ${{ needs.find_packages.outputs.dependencies-map }}
-    outputs:
-        ordered-packages: ${{ steps.ordered-packages.outputs.ordered-packages }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - id: ordered-packages
-        name: Ordering the packages array
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: | 
-          mapfile -t PACKAGES < <(echo $json_packages | jq -r '.[]')
+          echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
+          echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
+          npm install
 
-          # Declare associative array for dependencies
-          declare -A DEPENDENCIES_MAP
+      - name: Save node modules
+        uses: actions/upload-artifact@v2
+        with:
+          name: node_modules
+          path: node_modules
 
-          for pkg in "${PACKAGES[@]}"; do
-              # Extract dependencies for the package
-              dependencies=$(echo $json_dependencies | jq -r --arg pkg "$pkg" '.[$pkg] | @csv' | tr -d '"')
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
 
-              IFS=',' read -r -a deps <<< "$dependencies"
-              for dep in "${deps[@]}"; do
-                  if [[ -n "$dep" ]]; then
-                      DEPENDENCIES_MAP["$pkg,$dep"]=1
-                  fi
-              done
-          done
+      - name: Run tests
+        run: ls
 
-          # Topological sort function
-          function tsort() {
-              local -a nodes=("${!DEPENDENCIES_MAP[@]}")
-              local -A in_degree
-              local -a result
-
-              for pkg in "${PACKAGES[@]}"; do
-                  in_degree[$pkg]=0
-              done
-
-              for node in "${nodes[@]}"; do
-                  IFS=',' read -r src dst <<< "$node"
-                  ((in_degree[$dst]++))
-              done
-
-              local -a queue
-              for pkg in "${PACKAGES[@]}"; do
-                  if [[ ${in_degree[$pkg]} -eq 0 ]]; then
-                      queue+=("$pkg")
-                  fi
-              done
-
-              while [[ ${#queue[@]} -gt 0 ]]; do
-                  local node="${queue[0]}"
-                  queue=("${queue[@]:1}")
-                  result=("$node" "${result[@]}")  
-                  for edge in "${nodes[@]}"; do
-                      IFS=',' read -r src dst <<< "$edge"
-                      if [[ $src == "$node" ]]; then
-                          ((in_degree[$dst]--))
-                          if [[ ${in_degree[$dst]} -eq 0 ]]; then
-                              queue+=("$dst")
-                          fi
-                      fi
-                  done
-              done
-
-              echo "${result[@]}"
-          }
-
-          # Perform the topological sort
-          sorted_packages=$(tsort)
-          formatted_json=$(echo "$sorted_packages" | jq -R 'split(" ") | map(select(length > 0))' | jq -c)
-
-          echo "Ordered packages installation:"
-          echo "$formatted_json"
-
-          echo "ordered-packages=$(echo "$formatted_json")" >> $GITHUB_OUTPUT
-
-  publish-to-verdaccio:
-    needs: order_packages
+  lint:
     runs-on: ubuntu-latest
-    environment: Dev
-    env:
-      packages_json: ${{ needs.order_packages.outputs.ordered-packages }}
+    defaults:
+      run:
+        working-directory: ./CommonMessages
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
-      - name: Publish packages in order to Verdaccio
-        run: |
-          readarray -t packages < <(echo $packages_json | jq -r '.[]')
+      - name: Download node modules
+        uses: actions/download-artifact@v2
+        with:
+          name: node_modules
+          path: node_modules
 
-          # Iterate over each package
-          for PACKAGE in "${packages[@]}"; do
-            echo "    ***************** Processing package in directory $PACKAGE *****************    "
-            
-            echo "******** Navigate into the package directory..."
-            cd $PACKAGE
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
 
-            echo "******** Configure npm registry..." 
-            echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
-            echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
-
-            echo "******* Unpublish existing package version..."
-            npm unpublish --force || true
-
-            echo "******* Install package dependencies..."
-            npm install
-
-            echo "******* Publish the package to Verdaccio..."
-            npm publish
-
-            echo "******* Navigate back to the root directory..."
-            cd -
-
-            echo
-            echo
-          done
-        shell: bash
+      - name: Run linter
+        run: ls
