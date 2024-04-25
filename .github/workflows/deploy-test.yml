@@ -31,7 +31,6 @@ jobs:
           echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
           echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
           npm install
-          
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
