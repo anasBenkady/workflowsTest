@@ -27,18 +27,11 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: | 
           echo "registry=http://${{ secrets.VERDACCIO_REGISTRY }}/" > .npmrc
           echo "//${{ secrets.VERDACCIO_REGISTRY }}/:_authToken=\"${{ secrets.VERDACCIO_TOKEN }}\"" >> .npmrc
           npm install
-
-      - name: Save node modules
-        uses: actions/upload-artifact@v2
-        with:
-          name: node_modules
-          path: node_modules
-
+          
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
